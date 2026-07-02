@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Timetable</title>
+<style>
+  :root{
+    /* ---- Zen Browser inspired palette: sand/cream base, terracotta accent ---- */
+    --bg-1: #F3EEE4;
+    --bg-2: #EFE7DA;
+    --panel: rgba(255,255,255,0.52);
+    --panel-strong: rgba(255,255,255,0.72);
+    --panel-border: rgba(255,255,255,0.65);
+    --text-main: #4A4038;
+    --text-soft: #8A7D6E;
+    --terracotta: #B5674A;
+    --terracotta-soft: rgba(181,103,74,0.14);
+    --terracotta-strong: #9C5539;
+    --lavender: #C9C2DC;
+    --sage: #A9B79D;
+
+    /* muted calendar states — kept inside the same pastel family */
+    --dusty-rose: #E9C2BB;
+    --dusty-rose-text: #8C4A3B;
+    --butter: #F0E1AE;
+    --butter-text: #8A7431;
+    --mint: #BFD3B4;
+    --mint-text: #4E6B44;
+
+    --radius-lg: 22px;
+    --radius-md: 14px;
+    --radius-sm: 9px;
+    --shadow-soft: 0 8px 30px rgba(120,100,80,0.12);
+    --shadow-softer: 0 4px 16px rgba(120,100,80,0.08);
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0; padding:0; min-height:100vh;
+    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--text-main);
+    background:
+      radial-gradient(circle at 12% 8%, rgba(201,194,220,0.35), transparent 40%),
+      radial-gradient(circle at 90% 15%, rgba(169,183,157,0.30), transparent 45%),
+      radial-gradient(circle at 50% 100%, rgba(181,103,74,0.10), transparent 50%),
+      linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 32px 18px 120px;
+  }
+
+  /* ---------------- Top bar ---------------- */
+  .topbar{
+    width:100%;
+    max-width: 620px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .date-nav{
+    display:flex;
+    align-items:center;
+    gap: 18px;
+    background: var(--panel);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-lg);
+    padding: 14px 26px;
+    box-shadow: var(--shadow-soft);
+    flex: 1;
+    justify-content: space-between;
+  }
+
+  .nav-arrow{
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    color: var(--text-soft);
+    cursor: pointer;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .nav-arrow:hover{ background: rgba(181,103,74,0.10); color: var(--terracotta-strong); }
+
+  .date-info{ text-align:center; }
+  .date-info h1{
+    margin:0;
+    font-size: 22px;
+    font-weight: 650;
+    letter-spacing: 0.2px;
+  }
+  .date-info p{
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--text-soft);
+    letter-spacing: 0.3px;
+  }
+
+  #todayBtn{
+    background: var(--panel-strong);
+    border: 1px solid var(--panel-border);
+    color: var(--terracotta-strong);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: var(--shadow-softer);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    white-space: nowrap;
+  }
+  #todayBtn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-soft); }
+
+  /* ---------------- Progress ---------------- */
+  .progress-wrap{
+    width:100%;
+    max-width: 620px;
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    margin-bottom: 22px;
+    padding: 0 4px;
+  }
+  .progress-bar{
+    flex:1;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.55);
+    border: 1px solid var(--panel-border);
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background: linear-gradient(90deg, var(--terracotta), #C97F5F);
+    border-radius: 999px;
+    transition: width 0.5s ease;
+  }
+  #progressLabel{
+    font-size: 12.5px;
+    color: var(--text-soft);
+    min-width: 34px;
+    text-align:right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------------- Task list ---------------- */
+  .task-list{
+    width:100%;
+    max-width: 620px;
+    display:flex;
+    flex-direction:column;
+    gap: 10px;
+  }
+
+  .task-row{
+    display:flex;
+    align-items:flex-start;
+    gap: 14px;
+    background: var(--panel);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    box-shadow: var(--shadow-softer);
+    transition: background 0.35s ease, border-color 0.35s ease, transform 0.15s ease;
+  }
+  .task-row:hover{ transform: translateY(-1px); }
+
+  .task-row.current{
+    border-color: rgba(181,103,74,0.55);
+    background: linear-gradient(90deg, var(--terracotta-soft), var(--panel));
+    box-shadow: 0 6px 20px rgba(181,103,74,0.18);
+  }
+
+  .task-row.overdue{
+    background: rgba(233,194,187,0.55);
+    border-color: rgba(140,74,59,0.30);
+  }
+
+  .task-row.checked{
+    opacity: 0.62;
+  }
+
+  .task-check{
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    min-width: 22px;
+    margin-top: 2px;
+    border-radius: 7px;
+    border: 1.5px solid rgba(138,125,110,0.45);
+    background: rgba(255,255,255,0.6);
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .task-check:checked{
+    background: var(--terracotta);
+    border-color: var(--terracotta);
+  }
+  .task-check:checked::after{
+    content: "";
+    position: absolute;
+    left: 6px; top: 2px;
+    width: 6px; height: 11px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(40deg);
+  }
+
+  .task-body{ flex:1; }
+  .task-time{
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--terracotta-strong);
+    letter-spacing: 0.3px;
+    margin-bottom: 3px;
+  }
+  .task-row.overdue .task-time{ color: var(--dusty-rose-text); }
+
+  .task-desc{
+    font-size: 15px;
+    line-height: 1.42;
+    color: var(--text-main);
+  }
+
+  .empty-state{
+    text-align:center;
+    color: var(--text-soft);
+    padding: 40px 10px;
+    font-size: 14px;
+  }
+
+  /* ---------------- Calendar FAB ---------------- */
+  .calendar-fab{
+    position: fixed;
+    left: 24px;
+    bottom: 24px;
+    width: 58px; height: 58px;
+    border-radius: 50%;
+    border: 1px solid var(--panel-border);
+    background: var(--terracotta);
+    color: white;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    box-shadow: 0 10px 26px rgba(181,103,74,0.38);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    z-index: 50;
+  }
+  .calendar-fab:hover{ transform: translateY(-2px) scale(1.03); box-shadow: 0 14px 32px rgba(181,103,74,0.45); }
+  .calendar-fab svg{ width: 24px; height: 24px; }
+
+  /* ---------------- Calendar overlay ---------------- */
+  .overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(74,64,56,0.28);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index: 100;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+  }
+  /* The [hidden] attribute is normally display:none by default, but our
+     own .overlay{display:flex} rule above has higher specificity and was
+     silently overriding it — leaving an invisible layer on top of the
+     whole page that swallowed every click. This rule restores it. */
+  .overlay[hidden]{
+    display: none;
+  }
+  @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+
+  .calendar-modal{
+    width: 100%;
+    max-width: 440px;
+    background: var(--panel-strong);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    padding: 22px 22px 20px;
+    animation: riseIn 0.25s ease;
+  }
+  @keyframes riseIn{ from{ opacity:0; transform: translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+  .calendar-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom: 14px;
+    gap: 8px;
+  }
+  .calendar-header h2{
+    margin:0;
+    font-size: 17px;
+    font-weight: 650;
+    flex:1;
+    text-align:center;
+  }
+  .cal-nav-btn, .close-btn{
+    background: rgba(255,255,255,0.5);
+    border: 1px solid var(--panel-border);
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    cursor:pointer;
+    color: var(--text-soft);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 15px;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .cal-nav-btn:hover, .close-btn:hover{ background: var(--terracotta-soft); color: var(--terracotta-strong); }
+
+  .calendar-weekdays{
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 6px;
+  }
+  .calendar-weekdays span{
+    text-align:center;
+    font-size: 11px;
+    color: var(--text-soft);
+    font-weight: 600;
+  }
+
+  .calendar-grid{
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+
+  .cal-day{
+    aspect-ratio: 1 / 1;
+    border-radius: 11px;
+    border: 1px solid rgba(255,255,255,0.5);
+    background: rgba(255,255,255,0.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size: 13px;
+    cursor:pointer;
+    color: var(--text-main);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
+  }
+  .cal-day:hover{ transform: scale(1.06); box-shadow: var(--shadow-softer); }
+  .cal-day.empty{ visibility:hidden; cursor:default; }
+  .cal-day.is-today{ border: 1.5px solid var(--terracotta); font-weight: 700; }
+  .cal-day.is-selected{ box-shadow: 0 0 0 2px var(--terracotta-strong) inset; }
+
+  .cal-day.pct-red{ background: var(--dusty-rose); color: var(--dusty-rose-text); }
+  .cal-day.pct-yellow{ background: var(--butter); color: var(--butter-text); }
+  .cal-day.pct-green{ background: var(--mint); color: var(--mint-text); }
+
+  .calendar-legend{
+    display:flex;
+    justify-content:center;
+    gap: 16px;
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--text-soft);
+  }
+  .legend-dot{
+    display:inline-block;
+    width:9px; height:9px;
+    border-radius:50%;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+
+  @media (max-width: 480px){
+    .date-info h1{ font-size: 19px; }
+    .task-desc{ font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="date-nav">
+      <button class="nav-arrow" id="prevDay" aria-label="Previous day">‹</button>
+      <div class="date-info">
+        <h1 id="dayName">—</h1>
+        <p id="dateLabel">—</p>
+      </div>
+      <button class="nav-arrow" id="nextDay" aria-label="Next day">›</button>
+    </div>
+    <button id="todayBtn" hidden>Today</button>
+  </header>
+
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <span id="progressLabel">0%</span>
+  </div>
+
+  <main class="task-list" id="taskList"></main>
+
+  <button class="calendar-fab" id="calendarBtn" aria-label="Open calendar" title="Open calendar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="5" width="18" height="16" rx="3"></rect>
+      <path d="M8 3v4M16 3v4M3 10h18"></path>
+    </svg>
+  </button>
+
+  <div class="overlay" id="calendarOverlay" hidden>
+    <div class="calendar-modal">
+      <div class="calendar-header">
+        <button class="cal-nav-btn" id="calPrevMonth" aria-label="Previous month">‹</button>
+        <h2 id="calMonthLabel">Month Year</h2>
+        <button class="cal-nav-btn" id="calNextMonth" aria-label="Next month">›</button>
+        <button class="close-btn" id="calClose" aria-label="Close calendar">✕</button>
+      </div>
+      <div class="calendar-weekdays">
+        <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+      </div>
+      <div class="calendar-grid" id="calendarGrid"></div>
+      <div class="calendar-legend">
+        <span><span class="legend-dot" style="background:var(--dusty-rose)"></span>Under 30%</span>
+        <span><span class="legend-dot" style="background:var(--butter)"></span>30–99%</span>
+        <span><span class="legend-dot" style="background:var(--mint)"></span>100%</span>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =====================================================================
+   WEEKLY SCHEDULE TEMPLATE
+   ---------------------------------------------------------------------
+   Edit this object to change the schedule. Keys are JS Date.getDay()
+   values: 0 = Sunday, 1 = Monday, ... 6 = Saturday.
+
+   Each task's start/end are stored as MINUTES OFFSET FROM 5:00 AM of
+   that logical day (offset 0 = 5:00 AM, offset 1260 = 2:00 AM the
+   FOLLOWING calendar date). This lets us handle the 5am–2am "day"
+   boundary with simple arithmetic instead of juggling two calendar
+   dates everywhere. See `blockDateTime()` below for how an offset is
+   turned back into a real Date/time.
+
+   "id" must be unique within a day's task list — it's used as the key
+   when saving checkbox state to localStorage, so keep ids stable if
+   you edit descriptions later (renaming an id will "reset" that task).
+===================================================================== */
+
+// Shared morning + midday blocks (identical every day of the week)
+const MORNING_BLOCKS = [
+  { id: "wake_routine", start: 0,   end: 20,  time: "5:00 – 5:20 AM",
+    desc: "Wake up. Brush, ice face, wash face, apply placentrex, drink 1/2 bottle of water, 20 pushups, 50 crunches, take omega 3" },
+  { id: "coffee_meditate", start: 20, end: 35, time: "5:20 – 5:35 AM",
+    desc: "Drink coffee (5 min) and meditate (10 min)" },
+  { id: "questions", start: 35, end: 180, time: "5:35 – 8:00 AM",
+    desc: "Questions" },
+  { id: "video_7hr", start: 180, end: 450, time: "8:00 AM – 12:30 PM",
+    desc: "7 hour video" },
+  { id: "lunch_bath", start: 450, end: 510, time: "12:30 – 1:30 PM",
+    desc: "Lunch, bath, drink 1/2 glass water" },
+  { id: "stretch_study", start: 510, end: 930, time: "1:30 – 8:30 PM",
+    desc: "1 stretch study – 10 hours" },
+];
+
+// Shared late-night blocks (identical every day of the week)
+const NIGHT_BLOCKS = [
+  { id: "night_routine", start: 1230, end: 1250, time: "1:30 – 1:50 AM",
+    desc: "20 pushups, 50 crunches, brush teeth, wash face, apply adapalene" },
+  { id: "night_meditate", start: 1250, end: 1260, time: "1:50 – 2:00 AM",
+    desc: "Meditate" },
+];
+
+// Evening blocks — differ between "study straight through" days
+// and "class" days.
+const EVENING_STUDY_ONLY = [
+  { id: "study_evening", start: 930, end: 1230, time: "8:30 PM – 1:30 AM",
+    desc: "Study" },
+];
+
+const EVENING_WITH_CLASS = [
+  { id: "study_early_evening", start: 930, end: 960, time: "8:30 – 9:00 PM",
+    desc: "Study" },
+  { id: "class_self_educate", start: 960, end: 1080, time: "9:00 – 11:00 PM",
+    desc: "Class (self educate)" },
+  { id: "study_late_evening", start: 1080, end: 1230, time: "11:00 PM – 1:30 AM",
+    desc: "Study" },
+];
+
+function buildDay(evening) {
+  return [...MORNING_BLOCKS, ...evening, ...NIGHT_BLOCKS];
+}
+
+const SCHEDULE_TEMPLATE = {
+  0: buildDay(EVENING_STUDY_ONLY),   // Sunday
+  1: buildDay(EVENING_STUDY_ONLY),   // Monday
+  2: buildDay(EVENING_WITH_CLASS),   // Tuesday
+  3: buildDay(EVENING_STUDY_ONLY),   // Wednesday
+  4: buildDay(EVENING_WITH_CLASS),   // Thursday
+  5: buildDay(EVENING_STUDY_ONLY),   // Friday
+  6: buildDay(EVENING_WITH_CLASS),   // Saturday
+};
+
+const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const STORAGE_PREFIX = "timetable_";
+
+/* =====================================================================
+   DAY-BOUNDARY HELPERS
+   ---------------------------------------------------------------------
+   A "logical day" runs 5:00 AM -> 2:00 AM the next calendar date.
+   We represent a logical day by a plain Date set to local midnight of
+   its OWN calendar date (e.g. the logical day that starts 5am July 2
+   is represented by the Date "July 2, 00:00").
+===================================================================== */
+
+// Strip time-of-day, return a Date at local midnight for the given date.
+function atMidnight(d) {
+  const copy = new Date(d);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+// Given "now", figure out which logical day we're currently in.
+// Between 00:00 and 04:59 we still belong to YESTERDAY's logical day
+// (that's its 1:30–2:00 AM tail). From 05:00 onward we belong to today.
+function getLogicalDateFor(now) {
+  const midnight = atMidnight(now);
+  if (now.getHours() < 5) {
+    const yesterday = new Date(midnight);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday;
+  }
+  return midnight;
+}
+
+// Turn an offset-from-5am (in minutes) into a real Date, anchored to
+// the given logical day. Offsets > 1140 (i.e. past midnight) correctly
+// roll over into the next calendar date automatically because we're
+// just adding minutes to a Date object.
+function blockDateTime(logicalDate, offsetMinutes) {
+  const base = new Date(logicalDate);
+  base.setHours(5, 0, 0, 0);
+  return new Date(base.getTime() + offsetMinutes * 60000);
+}
+
+function dateKey(logicalDate) {
+  const y = logicalDate.getFullYear();
+  const m = String(logicalDate.getMonth() + 1).padStart(2, "0");
+  const d = String(logicalDate.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function storageKey(logicalDate) {
+  return STORAGE_PREFIX + dateKey(logicalDate);
+}
+
+function getTasksForDate(logicalDate) {
+  return SCHEDULE_TEMPLATE[logicalDate.getDay()];
+}
+
+/* =====================================================================
+   LOCALSTORAGE — per exact calendar date (not per weekday)
+===================================================================== */
+
+function loadState(logicalDate) {
+  try {
+    const raw = localStorage.getItem(storageKey(logicalDate));
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.error("Failed to read saved state:", e);
+    return null;
+  }
+}
+
+function saveState(logicalDate, state) {
+  try {
+    localStorage.setItem(storageKey(logicalDate), JSON.stringify(state));
+  } catch (e) {
+    console.error("Failed to save state:", e);
+  }
+}
+
+// Ensures a (possibly empty) state object exists in storage for this
+// date, so the calendar can tell "opened, 0% done" apart from
+// "never opened". Returns the state object (existing or freshly made).
+function ensureVisited(logicalDate) {
+  let state = loadState(logicalDate);
+  if (state === null) {
+    state = {};
+    saveState(logicalDate, state);
+  }
+  return state;
+}
+
+/* =====================================================================
+   APP STATE + RENDERING
+===================================================================== */
+
+let viewingDate = getLogicalDateFor(new Date()); // which logical day is shown in main view
+let calendarMonthCursor = new Date(viewingDate); // month currently shown in calendar overlay
+
+function isSameDate(a, b) {
+  return dateKey(a) === dateKey(b);
+}
+
+function renderHeader() {
+  const dayName = DAY_NAMES[viewingDate.getDay()];
+  document.getElementById("dayName").textContent = dayName;
+  document.getElementById("dateLabel").textContent =
+    viewingDate.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+
+  const todayLogical = getLogicalDateFor(new Date());
+  document.getElementById("todayBtn").hidden = isSameDate(viewingDate, todayLogical);
+}
+
+function renderTaskList() {
+  const tasks = getTasksForDate(viewingDate);
+  const state = ensureVisited(viewingDate); // marks day as "opened"
+  const now = new Date();
+  const todayLogical = getLogicalDateFor(now);
+  const isActualToday = isSameDate(viewingDate, todayLogical);
+
+  const listEl = document.getElementById("taskList");
+  listEl.innerHTML = "";
+
+  let checkedCount = 0;
+
+  tasks.forEach(task => {
+    const isChecked = !!state[task.id];
+    if (isChecked) checkedCount++;
+
+    const startDT = blockDateTime(viewingDate, task.start);
+    const endDT = blockDateTime(viewingDate, task.end);
+
+    const isOverdue = !isChecked && isActualToday && now > endDT;
+    const isCurrent = isActualToday && now >= startDT && now <= endDT;
+
+    const row = document.createElement("div");
+    row.className = "task-row";
+    if (isChecked) row.classList.add("checked");
+    if (isOverdue) row.classList.add("overdue");
+    if (isCurrent && !isChecked) row.classList.add("current");
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "task-check";
+    checkbox.checked = isChecked;
+    checkbox.setAttribute("aria-label", `Mark "${task.desc}" complete`);
+    checkbox.addEventListener("change", () => {
+      const current = loadState(viewingDate) || {};
+      current[task.id] = checkbox.checked;
+      saveState(viewingDate, current);
+      renderTaskList(); // re-render to update red highlight / progress
+    });
+
+    const body = document.createElement("div");
+    body.className = "task-body";
+
+    const timeEl = document.createElement("div");
+    timeEl.className = "task-time";
+    timeEl.textContent = task.time;
+
+    const descEl = document.createElement("div");
+    descEl.className = "task-desc";
+    descEl.textContent = task.desc;
+
+    body.appendChild(timeEl);
+    body.appendChild(descEl);
+    row.appendChild(checkbox);
+    row.appendChild(body);
+    listEl.appendChild(row);
+  });
+
+  const pct = tasks.length ? Math.round((checkedCount / tasks.length) * 100) : 0;
+  document.getElementById("progressFill").style.width = pct + "%";
+  document.getElementById("progressLabel").textContent = pct + "%";
+}
+
+function renderAll() {
+  renderHeader();
+  renderTaskList();
+}
+
+/* Day navigation */
+document.getElementById("prevDay").addEventListener("click", () => {
+  viewingDate.setDate(viewingDate.getDate() - 1);
+  viewingDate = new Date(viewingDate);
+  renderAll();
+});
+document.getElementById("nextDay").addEventListener("click", () => {
+  viewingDate.setDate(viewingDate.getDate() + 1);
+  viewingDate = new Date(viewingDate);
+  renderAll();
+});
+document.getElementById("todayBtn").addEventListener("click", () => {
+  viewingDate = getLogicalDateFor(new Date());
+  renderAll();
+});
+
+/* =====================================================================
+   CALENDAR OVERLAY
+===================================================================== */
+
+const overlay = document.getElementById("calendarOverlay");
+const calendarBtn = document.getElementById("calendarBtn");
+const calClose = document.getElementById("calClose");
+
+function openCalendar() {
+  calendarMonthCursor = new Date(viewingDate.getFullYear(), viewingDate.getMonth(), 1);
+  renderCalendar();
+  overlay.hidden = false;
+}
+function closeCalendar() {
+  overlay.hidden = true;
+}
+
+calendarBtn.addEventListener("click", openCalendar);
+calClose.addEventListener("click", closeCalendar);
+overlay.addEventListener("click", (e) => {
+  if (e.target === overlay) closeCalendar();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !overlay.hidden) closeCalendar();
+});
+
+document.getElementById("calPrevMonth").addEventListener("click", () => {
+  calendarMonthCursor.setMonth(calendarMonthCursor.getMonth() - 1);
+  renderCalendar();
+});
+document.getElementById("calNextMonth").addEventListener("click", () => {
+  calendarMonthCursor.setMonth(calendarMonthCursor.getMonth() + 1);
+  renderCalendar();
+});
+
+function completionForDate(d) {
+  const raw = localStorage.getItem(storageKey(d));
+  if (raw === null) return null; // never opened -> neutral
+  let state;
+  try { state = JSON.parse(raw); } catch (e) { return null; }
+  const tasks = getTasksForDate(d);
+  if (!tasks.length) return null;
+  const checked = tasks.filter(t => state[t.id]).length;
+  return Math.round((checked / tasks.length) * 100);
+}
+
+function renderCalendar() {
+  document.getElementById("calMonthLabel").textContent =
+    `${MONTH_NAMES[calendarMonthCursor.getMonth()]} ${calendarMonthCursor.getFullYear()}`;
+
+  const grid = document.getElementById("calendarGrid");
+  grid.innerHTML = "";
+
+  const year = calendarMonthCursor.getFullYear();
+  const month = calendarMonthCursor.getMonth();
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const todayLogical = getLogicalDateFor(new Date());
+
+  // Leading blanks so day-of-week columns line up
+  for (let i = 0; i < firstWeekday; i++) {
+    const blank = document.createElement("div");
+    blank.className = "cal-day empty";
+    grid.appendChild(blank);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const cellDate = new Date(year, month, day);
+    const cell = document.createElement("div");
+    cell.className = "cal-day";
+    cell.textContent = day;
+
+    const pct = completionForDate(cellDate);
+    if (pct !== null) {
+      if (pct >= 100) cell.classList.add("pct-green");
+      else if (pct >= 30) cell.classList.add("pct-yellow");
+      else cell.classList.add("pct-red");
+    }
+
+    if (isSameDate(cellDate, todayLogical)) cell.classList.add("is-today");
+    if (isSameDate(cellDate, viewingDate)) cell.classList.add("is-selected");
+
+    cell.addEventListener("click", () => {
+      viewingDate = atMidnight(cellDate);
+      renderAll();
+      closeCalendar();
+    });
+
+    grid.appendChild(cell);
+  }
+}
+
+/* =====================================================================
+   INIT + LIVE REFRESH
+   (keeps the red "overdue" highlight and current-task highlight
+   accurate as time passes, without requiring a page reload)
+===================================================================== */
+
+renderAll();
+setInterval(() => {
+  // Only the currently-viewed day's overdue/current styling needs
+  // refreshing; re-render is cheap so we just do it outright.
+  renderTaskList();
+}, 30000);
+</script>
+</body>
+</html>
